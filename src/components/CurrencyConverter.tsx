@@ -1,181 +1,197 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 const currencyToCountry: Record<string, string> = {
-  USD: "🇺🇸", EUR: "🇪🇺", GBP: "🇬🇧", JPY: "🇯🇵", AUD: "🇦🇺", CAD: "🇨🇦", CHF: "🇨🇭",
-  CNY: "🇨🇳", HKD: "🇭🇰", NZD: "🇳🇿", SEK: "🇸🇪", KRW: "🇰🇷", SGD: "🇸🇬", NOK: "🇳🇴",
-  MXN: "🇲🇽", INR: "🇮🇳", RUB: "🇷🇺", ZAR: "🇿🇦", TRY: "🇹🇷", BRL: "🇧🇷", TWD: "🇹🇼",
-  DKK: "🇩🇰", PLN: "🇵🇱", THB: "🇹🇭", IDR: "🇮🇩", HUF: "🇭🇺", CZK: "🇨🇿", ILS: "🇮🇱",
-  CLP: "🇨🇱", PHP: "🇵🇭", AED: "🇦🇪", COP: "🇨🇴", SAR: "🇸🇦", MYR: "🇲🇾", RON: "🇷🇴",
-  PKR: "🇵🇰", EGP: "🇪🇬", VND: "🇻🇳", BDT: "🇧🇩", NGN: "🇳🇬", ARS: "🇦🇷", MAD: "🇲🇦"
+  USD: 'us', EUR: 'eu', GBP: 'gb', JPY: 'jp', AUD: 'au', CAD: 'ca', CHF: 'ch',
+  CNY: 'cn', HKD: 'hk', NZD: 'nz', SEK: 'se', KRW: 'kr', SGD: 'sg', NOK: 'no',
+  MXN: 'mx', INR: 'in', RUB: 'ru', ZAR: 'za', TRY: 'tr', BRL: 'br', TWD: 'tw',
+  DKK: 'dk', PLN: 'pl', THB: 'th', IDR: 'id', HUF: 'hu', CZK: 'cz', ILS: 'il',
+  CLP: 'cl', PHP: 'ph', AED: 'ae', COP: 'co', SAR: 'sa', MYR: 'my', RON: 'ro',
+  PKR: 'pk', EGP: 'eg', VND: 'vn', BDT: 'bd', NGN: 'ng', ARS: 'ar', MAD: 'ma',
+}
+
+function Flag({ code }: { code: string }) {
+  const country = currencyToCountry[code]
+  if (!country) return <span className="w-6 h-4 bg-slate-200 rounded-sm inline-block" />
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={`https://flagcdn.com/w40/${country}.png`}
+      alt={code}
+      width={24}
+      height={16}
+      className="rounded-sm object-cover shrink-0"
+      style={{ width: 24, height: 16 }}
+    />
+  )
 }
 
 const currencyNames: Record<string, string> = {
-  USD: "US Dollar", EUR: "Euro", GBP: "British Pound", JPY: "Japanese Yen", 
-  AUD: "Australian Dollar", CAD: "Canadian Dollar", CHF: "Swiss Franc",
-  CNY: "Chinese Yuan", HKD: "Hong Kong Dollar", NZD: "New Zealand Dollar", 
-  SEK: "Swedish Krona", KRW: "South Korean Won", SGD: "Singapore Dollar", 
-  NOK: "Norwegian Krone", MXN: "Mexican Peso", INR: "Indian Rupee", 
-  RUB: "Russian Ruble", ZAR: "South African Rand", TRY: "Turkish Lira", 
-  BRL: "Brazilian Real", TWD: "Taiwan Dollar", DKK: "Danish Krone", 
-  PLN: "Polish Zloty", THB: "Thai Baht", IDR: "Indonesian Rupiah", 
-  HUF: "Hungarian Forint", CZK: "Czech Koruna", ILS: "Israeli Shekel",
-  CLP: "Chilean Peso", PHP: "Philippine Peso", AED: "UAE Dirham", 
-  COP: "Colombian Peso", SAR: "Saudi Riyal", MYR: "Malaysian Ringgit", 
-  RON: "Romanian Leu", PKR: "Pakistani Rupee", EGP: "Egyptian Pound", 
-  VND: "Vietnamese Dong", BDT: "Bangladeshi Taka", NGN: "Nigerian Naira", 
-  ARS: "Argentine Peso", MAD: "Moroccan Dirham"
+  USD: 'US Dollar', EUR: 'Euro', GBP: 'British Pound', JPY: 'Japanese Yen',
+  AUD: 'Australian Dollar', CAD: 'Canadian Dollar', CHF: 'Swiss Franc',
+  CNY: 'Chinese Yuan', HKD: 'Hong Kong Dollar', NZD: 'New Zealand Dollar',
+  SEK: 'Swedish Krona', KRW: 'South Korean Won', SGD: 'Singapore Dollar',
+  NOK: 'Norwegian Krone', MXN: 'Mexican Peso', INR: 'Indian Rupee',
+  RUB: 'Russian Ruble', ZAR: 'South African Rand', TRY: 'Turkish Lira',
+  BRL: 'Brazilian Real', TWD: 'Taiwan Dollar', DKK: 'Danish Krone',
+  PLN: 'Polish Zloty', THB: 'Thai Baht', IDR: 'Indonesian Rupiah',
+  HUF: 'Hungarian Forint', CZK: 'Czech Koruna', ILS: 'Israeli Shekel',
+  CLP: 'Chilean Peso', PHP: 'Philippine Peso', AED: 'UAE Dirham',
+  COP: 'Colombian Peso', SAR: 'Saudi Riyal', MYR: 'Malaysian Ringgit',
+  RON: 'Romanian Leu', PKR: 'Pakistani Rupee', EGP: 'Egyptian Pound',
+  VND: 'Vietnamese Dong', BDT: 'Bangladeshi Taka', NGN: 'Nigerian Naira',
+  ARS: 'Argentine Peso', MAD: 'Moroccan Dirham',
 }
 
-export default function CurrencyConverter() {
-  const [currencies, setCurrencies] = useState<string[]>([])
-  const [rates, setRates] = useState<Record<string, number>>({})
-  const [fromCurrency, setFromCurrency] = useState('USD')
-  const [toCurrency, setToCurrency] = useState('EUR')
+type Props = {
+  loading: boolean
+  currencyList: string[]
+  rates: Record<string, number>
+  base: string
+  date?: string
+}
+
+function CurrencySelect({
+  value,
+  onChange,
+  currencies,
+  disabled,
+}: {
+  value: string
+  onChange: (v: string) => void
+  currencies: string[]
+  disabled: boolean
+}) {
+  return (
+    <div className="flex items-center gap-2 min-w-0">
+      <Flag code={value} />
+      <div className="min-w-0">
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          disabled={disabled}
+          className="w-full bg-transparent font-semibold text-slate-900 text-sm outline-none cursor-pointer"
+        >
+          {currencies.map((c) => (
+            <option key={c} value={c}>
+              {c} – {currencyNames[c] ?? c}
+            </option>
+          ))}
+        </select>
+        <div className="text-xs text-slate-500 truncate">{currencyNames[value] ?? value}</div>
+      </div>
+    </div>
+  )
+}
+
+export default function CurrencyConverter({ loading, currencyList, rates, base, date }: Props) {
+  const [from, setFrom] = useState('USD')
+  const [to, setTo] = useState('EUR')
   const [amount, setAmount] = useState('1')
-  const [result, setResult] = useState('')
-  const [rateInfo, setRateInfo] = useState('')
-  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch('/api/exchange')
-      .then(res => res.json())
-      .then(data => {
-        setCurrencies(Object.keys(data.rates))
-        setRates(data.rates)
-        setLoading(false)
-      })
-      .catch(() => setLoading(false))
-  }, [])
+    if (!currencyList.length) return
+    if (!currencyList.includes(from)) setFrom(base)
+    if (!currencyList.includes(to)) setTo('EUR')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currencyList, base])
 
-  const calculateRate = useCallback(() => {
-    if (!rates[fromCurrency] || !rates[toCurrency]) return
-    
-    const amt = parseFloat(amount) || 1
-    const fromRate = rates[fromCurrency]
-    const toRate = rates[toCurrency]
+  const result = useMemo(() => {
+    const amt = parseFloat(amount) || 0
+    const fromRate = rates[from]
+    const toRate = rates[to]
+    if (!fromRate || !toRate) return null
     const rate = toRate / fromRate
-    const finalAmount = amt * rate
-    
-    setResult(`${fromCurrency} ${amt.toFixed(2)} = ${toCurrency} ${finalAmount.toFixed(4)}`)
-    setRateInfo(`1 ${fromCurrency} = ${rate.toFixed(6)} ${toCurrency}`)
-  }, [amount, fromCurrency, toCurrency, rates])
-
-  useEffect(() => {
-    if (Object.keys(rates).length > 0) {
-      calculateRate()
-    }
-  }, [calculateRate, rates])
+    return { amt, rate, converted: amt * rate }
+  }, [amount, from, to, rates])
 
   const handleSwap = () => {
-    setFromCurrency(toCurrency)
-    setToCurrency(fromCurrency)
-  }
-
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-blue-900 via-blue-800 to-blue-900 flex items-start justify-center pt-20 px-4">
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden">
-          <div className="bg-blue-900 p-4">
-            <h1 className="text-white text-xl font-semibold">Currency Converter</h1>
-          </div>
-          <div className="p-8 text-center text-gray-500">Loading exchange rates...</div>
-        </div>
-      </div>
-    )
+    setFrom(to)
+    setTo(from)
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-900 via-blue-800 to-blue-900 flex items-start justify-center pt-20 px-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden">
-        {/* Header */}
-        <div className="bg-blue-900 p-4 flex items-center gap-2">
-          <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <h1 className="text-white text-xl font-semibold">Currency Converter</h1>
-        </div>
-        
-        {/* Body */}
-        <div className="p-6 md:p-8">
-          {/* Amount Input */}
-          <div className="mb-6">
-            <label className="block text-gray-500 text-sm mb-2 font-medium">Amount</label>
-            <div className="flex items-center border-2 border-gray-200 rounded-lg p-3 bg-white hover:border-blue-500 transition-colors">
-              <span className="text-2xl mr-2">{currencyToCountry[fromCurrency] || '🌐'}</span>
+    <div className="rounded-2xl bg-white shadow-2xl overflow-hidden">
+      <div className="p-5 md:p-7">
+        <div className="flex flex-col md:flex-row md:items-end gap-3">
+          {/* From */}
+          <div className="flex-1">
+            <label className="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wide">Amount</label>
+            <div className="flex items-center gap-3 rounded-xl border-2 border-slate-200 focus-within:border-blue-500 bg-white px-4 py-3 transition-colors">
               <input
                 type="number"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="flex-1 text-2xl font-semibold text-gray-800 outline-none"
+                className="w-28 bg-transparent text-xl font-bold text-slate-900 outline-none"
                 min="0"
-                step="0.01"
+                step="any"
               />
-              <select
-                value={fromCurrency}
-                onChange={(e) => setFromCurrency(e.target.value)}
-                className="ml-2 text-gray-600 font-medium outline-none cursor-pointer bg-transparent"
-              >
-                {currencies.map(currency => (
-                  <option key={currency} value={currency}>
-                    {currency} - {currencyNames[currency] || currency}
-                  </option>
-                ))}
-              </select>
+              <div className="h-8 w-px bg-slate-200 shrink-0" />
+              <CurrencySelect value={from} onChange={setFrom} currencies={currencyList} disabled={loading} />
             </div>
           </div>
-          
-          {/* Swap Button */}
-          <div className="flex justify-center mb-6">
+
+          {/* Swap */}
+          <div className="flex justify-center md:pb-1 shrink-0">
             <button
               onClick={handleSwap}
-              className="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center hover:bg-blue-700 transition-all hover:rotate-180 duration-300 shadow-lg"
+              disabled={loading}
+              type="button"
+              aria-label="Swap currencies"
+              className="h-10 w-10 rounded-full bg-slate-100 hover:bg-blue-100 hover:text-blue-600 text-slate-600 flex items-center justify-center transition-colors"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
               </svg>
             </button>
           </div>
-          
-          {/* To Currency */}
-          <div className="mb-6">
-            <label className="block text-gray-500 text-sm mb-2 font-medium">Converted to</label>
-            <div className="flex items-center border-2 border-gray-200 rounded-lg p-3 bg-gray-50">
-              <span className="text-2xl mr-2">{currencyToCountry[toCurrency] || '🌐'}</span>
-              <div className="flex-1">
-                <div className="text-2xl font-semibold text-gray-800">
-                  {rates[toCurrency] && rates[fromCurrency] 
-                    ? ((parseFloat(amount) || 1) * (rates[toCurrency] / rates[fromCurrency])).toFixed(4)
-                    : '...'} {toCurrency}
-                </div>
+
+          {/* To */}
+          <div className="flex-1">
+            <label className="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wide">Converted to</label>
+            <div className="flex items-center gap-3 rounded-xl border-2 border-slate-100 bg-slate-50 px-4 py-3">
+              <div className="w-28 text-xl font-bold text-slate-900 shrink-0">
+                {loading || !result ? (
+                  <span className="text-slate-400">—</span>
+                ) : (
+                  result.converted.toLocaleString(undefined, { maximumFractionDigits: 4 })
+                )}
               </div>
-              <select
-                value={toCurrency}
-                onChange={(e) => setToCurrency(e.target.value)}
-                className="ml-2 text-gray-600 font-medium outline-none cursor-pointer bg-transparent"
-              >
-                {currencies.map(currency => (
-                  <option key={currency} value={currency}>
-                    {currency} - {currencyNames[currency] || currency}
-                  </option>
-                ))}
-              </select>
+              <div className="h-8 w-px bg-slate-200 shrink-0" />
+              <CurrencySelect value={to} onChange={setTo} currencies={currencyList} disabled={loading} />
             </div>
           </div>
-          
-          {/* Rate Info */}
-          <div className="bg-blue-50 rounded-lg p-4 mb-4">
-            <div className="text-lg font-semibold text-gray-800 mb-1">{result}</div>
-            <div className="text-sm text-gray-500">{rateInfo}</div>
-          </div>
-          
-          {/* Disclaimer */}
-          <p className="text-xs text-gray-400 text-center">
-            We use the mid-market rate for our Converter. This is for informational purposes only.
-          </p>
         </div>
+
+        {/* Rate info */}
+        <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="text-sm text-slate-700">
+            {loading ? (
+              <span className="text-slate-400">Fetching live rates…</span>
+            ) : result ? (
+              <>
+                <span className="font-semibold">
+                  {result.amt.toLocaleString()} {from} = {result.converted.toLocaleString(undefined, { maximumFractionDigits: 6 })} {to}
+                </span>
+                <div className="mt-0.5 text-xs text-slate-500">
+                  Mid-market rate · 1 {from} = {result.rate.toFixed(6)} {to}
+                  {date ? ` · ${date}` : ''}
+                </div>
+              </>
+            ) : null}
+          </div>
+
+          <div className="flex gap-2 shrink-0">
+            <button type="button" className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 transition-colors">
+              Set rate alert
+            </button>
+          </div>
+        </div>
+
+        <p className="mt-3 text-xs text-slate-400">
+          We use the mid-market rate for our Converter. This is for informational purposes .
+        </p>
       </div>
     </div>
   )

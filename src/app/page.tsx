@@ -1,5 +1,5 @@
-import CurrencyConverter from '@/components/CurrencyConverter'
+import HomePage from '@/components/HomePage'
 
 export default function Home() {
-  return <CurrencyConverter />
+  return <HomePage />
 }
